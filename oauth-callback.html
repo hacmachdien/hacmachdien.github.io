@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Signed in – Auto Prompt</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 1rem;
+      text-align: center;
+      background: #0f0f0f;
+      color: #e0e0e0;
+    }
+    h1 { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem; }
+    p { color: #888; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <h1>Signed in successfully</h1>
+  <p id="msg">Redirecting back to the app…</p>
+  <script>
+    (function () {
+      var hash = window.location.hash || "";
+      var query = window.location.search.slice(1);
+      var fragment = hash || (query ? "#" + query : "");
+
+      if (fragment) {
+        try {
+          window.location.replace("autoprompt://auth-callback" + fragment);
+        } catch (e) {}
+      }
+
+      setTimeout(function () {
+        try {
+          window.close();
+        } catch (e) {}
+        var el = document.getElementById("msg");
+        if (el) el.textContent = "You can close this tab and return to the app.";
+      }, 800);
+    })();
+  </script>
+</body>
+</html>
