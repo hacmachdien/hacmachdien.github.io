@@ -3,74 +3,269 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Signed in – Auto Prompt</title>
+  <title>Authentication – Auto Prompt</title>
   <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: system-ui, -apple-system, sans-serif;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       min-height: 100vh;
-      margin: 0;
-      padding: 1rem;
+      padding: 2rem;
       text-align: center;
-      background: #0f0f0f;
-      color: #e0e0e0;
+      background: #0f172a;
+      color: #e2e8f0;
     }
-    h1 { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem; }
-    p { color: #888; font-size: 0.9rem; }
-    .open-link {
+    .container {
+      max-width: 400px;
+      padding: 2rem;
+      background: rgba(30, 41, 59, 0.8);
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+    .logo {
+      width: 56px;
+      height: 56px;
+      margin: 0 auto 1rem;
+      background: #14b8a6;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .logo svg { width: 32px; height: 32px; }
+    h1 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #14b8a6;
+      margin-bottom: 0.5rem;
+    }
+    .status {
+      font-size: 0.95rem;
+      color: #94a3b8;
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+    .status.success { color: #22c55e; }
+    .status.error { color: #ef4444; }
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid rgba(20, 184, 166, 0.2);
+      border-top-color: #14b8a6;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 1rem auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .hidden { display: none !important; }
+    .btn {
       display: inline-block;
-      margin-top: 1rem;
-      padding: 0.6rem 1.2rem;
-      background: #0d9488;
-      color: #fff;
-      text-decoration: none;
-      border-radius: 6px;
+      padding: 12px 24px;
+      font-size: 0.9rem;
       font-weight: 500;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-decoration: none;
     }
-    .open-link:hover { background: #0f766e; }
+    .btn-primary {
+      background: #14b8a6;
+      color: #0f172a;
+    }
+    .btn-primary:hover { background: #0d9488; }
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: #e2e8f0;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      margin-top: 0.75rem;
+    }
+    .btn-secondary:hover { background: rgba(255, 255, 255, 0.15); }
+    .fallback {
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .fallback p {
+      font-size: 0.8rem;
+      color: #64748b;
+      margin-bottom: 0.75rem;
+    }
+    .token-box {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 12px;
+      font-family: ui-monospace, monospace;
+      font-size: 0.75rem;
+      color: #94a3b8;
+      word-break: break-all;
+      max-height: 80px;
+      overflow-y: auto;
+      margin-bottom: 0.75rem;
+      text-align: left;
+    }
+    .copy-success {
+      font-size: 0.8rem;
+      color: #22c55e;
+      margin-top: 0.5rem;
+    }
   </style>
 </head>
 <body>
-  <h1>Auto Prompt signed in successfully</h1>
-  <p id="msg"></p>
-  <div id="fallback" style="display: none;">
-    <a id="openLink" class="open-link" href="#">Open Auto Prompt extension</a>
+  <div class="container">
+    <div class="logo">
+      <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M8 12h16M8 16h12M8 20h8" stroke="#0f172a" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <h1>Auto Prompt</h1>
+    <div id="spinner" class="spinner"></div>
+    <p id="status" class="status">Completing authentication...</p>
+    
+    <div id="success-actions" class="hidden">
+      <p style="font-size: 0.85rem; color: #64748b; margin-top: 1rem;">
+        You can now close this tab and return to the extension.
+      </p>
+    </div>
+
+    <div id="fallback" class="fallback hidden">
+      <p>If automatic login didn't work, copy this token and paste it in the extension:</p>
+      <div id="token-box" class="token-box"></div>
+      <button id="copy-btn" class="btn btn-secondary">Copy Token</button>
+      <p id="copy-success" class="copy-success hidden">Copied to clipboard!</p>
+    </div>
   </div>
+
   <script>
-    (function () {
-      var hash = window.location.hash || "";
-      var params = new URLSearchParams(window.location.search);
-      var extensionId = params.get("extension_id");
-      var extensionUrl = extensionId
-        ? "chrome-extension://" + extensionId + "/sidepanel/auth-callback.html" + hash
-        : "";
+    (function() {
+      var spinnerEl = document.getElementById('spinner');
+      var statusEl = document.getElementById('status');
+      var successActionsEl = document.getElementById('success-actions');
+      var fallbackEl = document.getElementById('fallback');
+      var tokenBoxEl = document.getElementById('token-box');
+      var copyBtnEl = document.getElementById('copy-btn');
+      var copySuccessEl = document.getElementById('copy-success');
 
-      var msgEl = document.getElementById("msg");
-      var fallbackEl = document.getElementById("fallback");
-      var openLinkEl = document.getElementById("openLink");
+      function showStatus(message, type) {
+        if (spinnerEl) spinnerEl.classList.add('hidden');
+        if (statusEl) {
+          statusEl.textContent = message;
+          statusEl.className = 'status ' + (type || '');
+        }
+      }
 
-      if (extensionId && extensionUrl) {
-        // Don't redirect automatically: Chrome often blocks programmatic nav to chrome-extension:// (ERR_BLOCKED_BY_CLIENT).
-        // Show a button so the user clicks; user gesture is usually allowed.
-        if (msgEl) msgEl.textContent = "Click the button below to finish signing in.";
-        if (openLinkEl) openLinkEl.href = extensionUrl;
-        if (fallbackEl) fallbackEl.style.display = "block";
+      function showSuccess() {
+        showStatus('Authentication successful!', 'success');
+        if (successActionsEl) successActionsEl.classList.remove('hidden');
+        setTimeout(function() {
+          try { window.close(); } catch (e) {}
+        }, 2000);
+      }
+
+      function showFallback(tokenData) {
+        if (fallbackEl) fallbackEl.classList.remove('hidden');
+        if (tokenBoxEl) tokenBoxEl.textContent = JSON.stringify(tokenData, null, 2);
+        if (copyBtnEl) {
+          copyBtnEl.onclick = function() {
+            navigator.clipboard.writeText(JSON.stringify(tokenData)).then(function() {
+              if (copySuccessEl) copySuccessEl.classList.remove('hidden');
+              setTimeout(function() {
+                if (copySuccessEl) copySuccessEl.classList.add('hidden');
+              }, 2000);
+            });
+          };
+        }
+      }
+
+      function parseTokensFromHash() {
+        var hash = window.location.hash;
+        if (!hash || hash.length < 2) return null;
+        
+        var params = new URLSearchParams(hash.substring(1));
+        var access_token = params.get('access_token');
+        var refresh_token = params.get('refresh_token');
+        var provider_token = params.get('provider_token');
+        var expires_in = params.get('expires_in');
+        var token_type = params.get('token_type');
+
+        if (!access_token || !refresh_token) return null;
+
+        return {
+          access_token: access_token,
+          refresh_token: refresh_token,
+          provider_token: provider_token || null,
+          expires_in: expires_in ? parseInt(expires_in, 10) : null,
+          token_type: token_type || 'bearer'
+        };
+      }
+
+      // Get extension ID from query params
+      var urlParams = new URLSearchParams(window.location.search);
+      var extensionId = urlParams.get('extension_id');
+      var tokens = parseTokensFromHash();
+
+      // Tauri app flow - redirect to custom protocol
+      if (!extensionId) {
+        var hash = window.location.hash || '';
+        if (hash) {
+          showStatus('Redirecting to app...', '');
+          try {
+            window.location.replace('autoprompt://auth-callback' + hash);
+          } catch (e) {}
+          setTimeout(function() {
+            showStatus('You can close this tab and return to the app.', 'success');
+          }, 1000);
+        } else {
+          showStatus('No authentication data received.', 'error');
+        }
         return;
       }
 
-      if (msgEl) msgEl.textContent = "Redirecting back to the app…";
-      if (hash) {
-        try {
-          window.location.replace("autoprompt://auth-callback" + hash);
-        } catch (e) {}
+      // Chrome Extension flow - use cross-context messaging
+      if (!tokens) {
+        showStatus('Authentication failed: No tokens received.', 'error');
+        return;
       }
-      setTimeout(function () {
-        try { window.close(); } catch (e) {}
-        if (msgEl) msgEl.textContent = "You can close this tab and return to the app.";
-      }, 800);
+
+      // Check if chrome.runtime is available
+      if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.sendMessage) {
+        showStatus('Cannot connect to extension automatically.', 'error');
+        showFallback(tokens);
+        return;
+      }
+
+      // Send tokens to extension via chrome.runtime.sendMessage
+      try {
+        chrome.runtime.sendMessage(
+          extensionId,
+          { type: 'OAUTH_SUCCESS', tokens: tokens },
+          function(response) {
+            if (chrome.runtime.lastError) {
+              console.error('Extension communication error:', chrome.runtime.lastError.message);
+              showStatus('Could not connect to extension.', 'error');
+              showFallback(tokens);
+              return;
+            }
+
+            if (response && response.success) {
+              showSuccess();
+            } else {
+              var errorMsg = response && response.error ? response.error : 'Unknown error';
+              showStatus('Login failed: ' + errorMsg, 'error');
+              showFallback(tokens);
+            }
+          }
+        );
+      } catch (e) {
+        console.error('Error sending message:', e);
+        showStatus('Error communicating with extension.', 'error');
+        showFallback(tokens);
+      }
     })();
   </script>
 </body>
