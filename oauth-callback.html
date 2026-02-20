@@ -15,116 +15,62 @@
       margin: 0;
       padding: 1rem;
       text-align: center;
-      background: #0f172a;
-      color: #e2e8f0;
+      background: #0f0f0f;
+      color: #e0e0e0;
     }
-    h1 { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem; color: #14b8a6; }
-    p { color: #94a3b8; font-size: 0.9rem; margin: 0.5rem 0; }
-    .success { color: #22c55e; }
-    .error { color: #ef4444; }
-    .spinner {
-      width: 24px;
-      height: 24px;
-      border: 3px solid rgba(20, 184, 166, 0.2);
-      border-top-color: #14b8a6;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin: 1rem auto;
+    h1 { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem; }
+    p { color: #888; font-size: 0.9rem; }
+    .open-link {
+      display: inline-block;
+      margin-top: 1rem;
+      padding: 0.6rem 1.2rem;
+      background: #0d9488;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: 500;
     }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .hidden { display: none; }
+    .open-link:hover { background: #0f766e; }
   </style>
 </head>
 <body>
-  <h1>Auto Prompt</h1>
-  <div id="spinner" class="spinner"></div>
-  <p id="msg">Completing sign in...</p>
-
+  <h1>Auto Prompt signed in successfully</h1>
+  <p id="msg"></p>
+  <div id="fallback" style="display: none;">
+    <a id="openLink" class="open-link" href="#">Open Auto Prompt extension</a>
+  </div>
   <script>
     (function () {
-      var msgEl = document.getElementById("msg");
-      var spinnerEl = document.getElementById("spinner");
-
-      function showMessage(text, isError) {
-        if (spinnerEl) spinnerEl.classList.add("hidden");
-        if (msgEl) {
-          msgEl.textContent = text;
-          msgEl.className = isError ? "error" : "success";
-        }
-      }
-
-      function parseTokensFromHash(hash) {
-        if (!hash || hash.length < 2) return null;
-        var params = new URLSearchParams(hash.substring(1));
-        var access_token = params.get("access_token");
-        var refresh_token = params.get("refresh_token");
-        var provider_token = params.get("provider_token");
-        var expires_in = params.get("expires_in");
-        var token_type = params.get("token_type");
-        
-        if (!access_token || !refresh_token) return null;
-        
-        return {
-          access_token: access_token,
-          refresh_token: refresh_token,
-          provider_token: provider_token,
-          expires_in: expires_in ? parseInt(expires_in, 10) : null,
-          token_type: token_type || "bearer"
-        };
-      }
-
       var hash = window.location.hash || "";
       var params = new URLSearchParams(window.location.search);
       var extensionId = params.get("extension_id");
+      var extensionUrl = extensionId
+        ? "chrome-extension://" + extensionId + "/sidepanel/auth-callback.html" + hash
+        : "";
 
-      // Chrome Extension flow: send tokens via chrome.runtime.sendMessage
-      if (extensionId && typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.sendMessage) {
-        var tokens = parseTokensFromHash(hash);
-        
-        if (!tokens) {
-          showMessage("Authentication failed: No tokens received.", true);
-          return;
-        }
+      var msgEl = document.getElementById("msg");
+      var fallbackEl = document.getElementById("fallback");
+      var openLinkEl = document.getElementById("openLink");
 
-        try {
-          chrome.runtime.sendMessage(
-            extensionId,
-            { type: "AUTH_COMPLETE", data: tokens },
-            function (response) {
-              if (chrome.runtime.lastError) {
-                showMessage("Failed to connect to extension: " + chrome.runtime.lastError.message, true);
-                return;
-              }
-              if (response && response.success) {
-                showMessage("Login successful! You can close this tab.", false);
-                setTimeout(function () {
-                  try { window.close(); } catch (e) {}
-                }, 1500);
-              } else {
-                showMessage("Login failed: " + (response?.error || "Unknown error"), true);
-              }
-            }
-          );
-        } catch (e) {
-          showMessage("Error communicating with extension: " + e.message, true);
-        }
+      if (extensionId && extensionUrl) {
+        // Don't redirect automatically: Chrome often blocks programmatic nav to chrome-extension:// (ERR_BLOCKED_BY_CLIENT).
+        // Show a button so the user clicks; user gesture is usually allowed.
+        if (msgEl) msgEl.textContent = "Click the button below to finish signing in.";
+        if (openLinkEl) openLinkEl.href = extensionUrl;
+        if (fallbackEl) fallbackEl.style.display = "block";
         return;
       }
 
-      // Tauri app flow: redirect to custom protocol
+      if (msgEl) msgEl.textContent = "Redirecting back to the app…";
       if (hash) {
-        showMessage("Redirecting back to the app...", false);
         try {
           window.location.replace("autoprompt://auth-callback" + hash);
         } catch (e) {}
-        setTimeout(function () {
-          try { window.close(); } catch (e) {}
-          showMessage("You can close this tab and return to the app.", false);
-        }, 800);
-        return;
       }
-
-      showMessage("No authentication data received.", true);
+      setTimeout(function () {
+        try { window.close(); } catch (e) {}
+        if (msgEl) msgEl.textContent = "You can close this tab and return to the app.";
+      }, 800);
     })();
   </script>
 </body>
