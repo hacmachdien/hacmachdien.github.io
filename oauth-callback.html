@@ -114,6 +114,38 @@
       color: #22c55e;
       margin-top: 0.5rem;
     }
+    .debug-info {
+      margin-top: 1rem;
+      padding: 12px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+      font-size: 0.75rem;
+      color: #64748b;
+      text-align: left;
+    }
+    .debug-info .label { color: #94a3b8; font-weight: 500; }
+    .retry-section {
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .retry-section p {
+      font-size: 0.8rem;
+      color: #64748b;
+      margin-bottom: 0.5rem;
+    }
+    .id-input {
+      width: 100%;
+      padding: 8px 12px;
+      font-size: 0.85rem;
+      font-family: ui-monospace, monospace;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 6px;
+      color: #e2e8f0;
+      margin-bottom: 8px;
+    }
+    .id-input::placeholder { color: rgba(255, 255, 255, 0.35); }
   </style>
 </head>
 <body>
@@ -133,11 +165,23 @@
       </p>
     </div>
 
+    <div id="retry-section" class="retry-section hidden">
+      <p>Extension ID not provided? Enter it manually:</p>
+      <input id="manual-id" type="text" class="id-input" placeholder="Extension ID (e.g., abcdefgh...)">
+      <button id="retry-btn" class="btn btn-primary" style="width: 100%;">Retry Connection</button>
+    </div>
+
     <div id="fallback" class="fallback hidden">
       <p>If automatic login didn't work, copy this token and paste it in the extension:</p>
       <div id="token-box" class="token-box"></div>
       <button id="copy-btn" class="btn btn-secondary">Copy Token</button>
       <p id="copy-success" class="copy-success hidden">Copied to clipboard!</p>
+    </div>
+
+    <div id="debug-info" class="debug-info hidden">
+      <div><span class="label">Extension ID:</span> <span id="debug-ext-id">-</span></div>
+      <div><span class="label">Has Tokens:</span> <span id="debug-tokens">-</span></div>
+      <div><span class="label">Response:</span> <span id="debug-response">-</span></div>
     </div>
   </div>
 
@@ -146,17 +190,36 @@
       var spinnerEl = document.getElementById('spinner');
       var statusEl = document.getElementById('status');
       var successActionsEl = document.getElementById('success-actions');
+      var retrySectionEl = document.getElementById('retry-section');
+      var manualIdEl = document.getElementById('manual-id');
+      var retryBtnEl = document.getElementById('retry-btn');
       var fallbackEl = document.getElementById('fallback');
       var tokenBoxEl = document.getElementById('token-box');
       var copyBtnEl = document.getElementById('copy-btn');
       var copySuccessEl = document.getElementById('copy-success');
+      var debugInfoEl = document.getElementById('debug-info');
+      var debugExtIdEl = document.getElementById('debug-ext-id');
+      var debugTokensEl = document.getElementById('debug-tokens');
+      var debugResponseEl = document.getElementById('debug-response');
+
+      function log(msg) {
+        console.log('[OAuth Callback]', msg);
+      }
 
       function showStatus(message, type) {
+        log('Status: ' + message + ' (' + type + ')');
         if (spinnerEl) spinnerEl.classList.add('hidden');
         if (statusEl) {
           statusEl.textContent = message;
           statusEl.className = 'status ' + (type || '');
         }
+      }
+
+      function showDebug(extId, tokens, response) {
+        if (debugInfoEl) debugInfoEl.classList.remove('hidden');
+        if (debugExtIdEl) debugExtIdEl.textContent = extId || 'Not provided';
+        if (debugTokensEl) debugTokensEl.textContent = tokens ? 'Yes' : 'No';
+        if (debugResponseEl) debugResponseEl.textContent = response || '-';
       }
 
       function showSuccess() {
@@ -165,6 +228,11 @@
         setTimeout(function() {
           try { window.close(); } catch (e) {}
         }, 2000);
+      }
+
+      function showRetrySection(currentId) {
+        if (retrySectionEl) retrySectionEl.classList.remove('hidden');
+        if (manualIdEl && currentId) manualIdEl.value = currentId;
       }
 
       function showFallback(tokenData) {
@@ -204,10 +272,46 @@
         };
       }
 
+      function sendToExtension(extensionId, tokens, callback) {
+        log('Sending to extension: ' + extensionId);
+        
+        if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.sendMessage) {
+          log('Chrome runtime not available');
+          callback({ success: false, error: 'Chrome runtime not available' });
+          return;
+        }
+
+        try {
+          chrome.runtime.sendMessage(
+            extensionId,
+            { type: 'OAUTH_SUCCESS', tokens: tokens },
+            function(response) {
+              if (chrome.runtime.lastError) {
+                log('Chrome runtime error: ' + chrome.runtime.lastError.message);
+                callback({ 
+                  success: false, 
+                  error: chrome.runtime.lastError.message 
+                });
+                return;
+              }
+
+              log('Response received: ' + JSON.stringify(response));
+              callback(response || { success: false, error: 'No response' });
+            }
+          );
+        } catch (e) {
+          log('Exception: ' + e.message);
+          callback({ success: false, error: e.message });
+        }
+      }
+
       // Get extension ID from query params
       var urlParams = new URLSearchParams(window.location.search);
       var extensionId = urlParams.get('extension_id');
       var tokens = parseTokensFromHash();
+
+      log('Extension ID from URL: ' + extensionId);
+      log('Tokens parsed: ' + (tokens ? 'yes' : 'no'));
 
       // Tauri app flow - redirect to custom protocol
       if (!extensionId) {
@@ -222,6 +326,7 @@
           }, 1000);
         } else {
           showStatus('No authentication data received.', 'error');
+          showRetrySection('');
         }
         return;
       }
@@ -229,43 +334,53 @@
       // Chrome Extension flow - use cross-context messaging
       if (!tokens) {
         showStatus('Authentication failed: No tokens received.', 'error');
+        showDebug(extensionId, false, 'No tokens in URL hash');
         return;
       }
 
-      // Check if chrome.runtime is available
-      if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.sendMessage) {
-        showStatus('Cannot connect to extension automatically.', 'error');
-        showFallback(tokens);
-        return;
-      }
-
-      // Send tokens to extension via chrome.runtime.sendMessage
-      try {
-        chrome.runtime.sendMessage(
-          extensionId,
-          { type: 'OAUTH_SUCCESS', tokens: tokens },
-          function(response) {
-            if (chrome.runtime.lastError) {
-              console.error('Extension communication error:', chrome.runtime.lastError.message);
-              showStatus('Could not connect to extension.', 'error');
-              showFallback(tokens);
-              return;
-            }
-
+      // Setup retry button handler
+      if (retryBtnEl) {
+        retryBtnEl.onclick = function() {
+          var manualId = manualIdEl ? manualIdEl.value.trim() : '';
+          if (!manualId) {
+            showStatus('Please enter an extension ID.', 'error');
+            return;
+          }
+          
+          if (spinnerEl) spinnerEl.classList.remove('hidden');
+          showStatus('Retrying connection...', '');
+          
+          sendToExtension(manualId, tokens, function(response) {
+            showDebug(manualId, true, JSON.stringify(response));
+            
             if (response && response.success) {
               showSuccess();
             } else {
               var errorMsg = response && response.error ? response.error : 'Unknown error';
-              showStatus('Login failed: ' + errorMsg, 'error');
+              showStatus('Connection failed: ' + errorMsg, 'error');
               showFallback(tokens);
             }
-          }
-        );
-      } catch (e) {
-        console.error('Error sending message:', e);
-        showStatus('Error communicating with extension.', 'error');
-        showFallback(tokens);
+          });
+        };
       }
+
+      // Attempt to connect to extension
+      sendToExtension(extensionId, tokens, function(response) {
+        showDebug(extensionId, true, JSON.stringify(response));
+        
+        if (response && response.success) {
+          // Check for SUCCESS_ACK to confirm extension received it
+          if (response.ack === 'SUCCESS_ACK') {
+            log('Received SUCCESS_ACK from extension');
+          }
+          showSuccess();
+        } else {
+          var errorMsg = response && response.error ? response.error : 'Unknown error';
+          showStatus('Could not connect to extension: ' + errorMsg, 'error');
+          showRetrySection(extensionId);
+          showFallback(tokens);
+        }
+      });
     })();
   </script>
 </body>
