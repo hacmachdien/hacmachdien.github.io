@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy – AutoPrompt</title>
+  <style>
+    :root { --bg: #0f172a; --text: #e2e8f0; --muted: #94a3b8; --accent: #14b8a6; }
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, Segoe UI, sans-serif; line-height: 1.6; color: var(--text); background: var(--bg); margin: 0; padding: 2rem 1rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    h1 { font-size: 1.75rem; margin-top: 0; color: #fff; border-bottom: 1px solid rgba(20, 184, 166, 0.3); padding-bottom: 0.5rem; }
+    h2 { font-size: 1.15rem; margin-top: 1.75rem; color: var(--accent); }
+    p, li { color: var(--muted); margin: 0.5rem 0; }
+    ul { padding-left: 1.25rem; }
+    a { color: var(--accent); }
+    .updated { font-size: 0.9rem; color: var(--muted); margin-bottom: 1.5rem; }
+  </style>
+</head>
+<body>
+  <h1>Privacy Policy – AutoPrompt</h1>
+  <p class="updated">Last updated: February 2025</p>
+
+  <p>This Privacy Policy describes how AutoPrompt (“we”, “our”, or “the extension”) collects, uses, and discloses information when you use the AutoPrompt Chrome extension and related services.</p>
+
+  <h2>1. What AutoPrompt Does</h2>
+  <p>AutoPrompt is a Chrome extension that helps you refine and improve text (e.g. prompts, emails, messages) using AI. You select text on a webpage, trigger the extension (e.g. via a keyboard shortcut), and the extension sends that text to our backend to return a refined version, which you can accept or discard. The extension also supports signing in (e.g. with Google or email) and tracks daily usage to apply fair request limits.</p>
+
+  <h2>2. Information We Collect</h2>
+  <p>We collect only what is necessary to provide and operate the extension:</p>
+  <ul>
+    <li><strong>Account and authentication data</strong> – When you sign in (e.g. via Google or email/password), we receive and store your email address and a user identifier from our authentication provider (Supabase). We do not store your password; authentication is handled by Supabase.</li>
+    <li><strong>Text you choose to refine</strong> – When you use the “Refine” feature, the text you have selected (and, if you enable context-aware mode, a short summary of recent refinements and the domain of the page) is sent to our servers so we can return an improved version. We do not read or collect other content on the pages you visit.</li>
+    <li><strong>Usage and operational data</strong> – We store how many refinement requests you have made per day (to enforce daily limits), and we may log minimal operational data (e.g. request timestamps, errors) to maintain reliability and prevent abuse. We do not collect your general browsing history.</li>
+    <li><strong>Data stored only on your device</strong> – Settings (e.g. shortcut, persona, context-aware mode), recent prompt history used for context, and cached usage counts are stored locally in the extension (Chrome storage). We do not upload this unless you explicitly trigger a refinement (in which case only the relevant text and context are sent as described above).</li>
+  </ul>
+
+  <h2>3. How We Use This Information</h2>
+  <ul>
+    <li>To <strong>authenticate you</strong> and associate your usage with your account.</li>
+    <li>To <strong>provide the refinement service</strong> – i.e. to send your selected text to an AI provider (Groq) via our backend and return the result to you.</li>
+    <li>To <strong>enforce fair use</strong> – daily request limits and usage counts.</li>
+    <li>To <strong>maintain and improve</strong> the extension and our backend (e.g. debugging, preventing abuse).</li>
+  </ul>
+  <p>We do <strong>not</strong> use your data for advertising, selling data to third parties, or building marketing profiles.</p>
+
+  <h2>4. Who We Share Data With</h2>
+  <p>We share data only with service providers that help us operate the extension:</p>
+  <ul>
+    <li><strong>Supabase</strong> – We use Supabase for authentication and for storing usage data (e.g. daily request counts). Supabase processes data on our behalf under their terms and privacy policy.</li>
+    <li><strong>Groq</strong> – The text you send for refinement is forwarded to Groq’s API so they can run the AI model and return the refined text. Groq processes this data according to their terms and privacy policy.</li>
+  </ul>
+  <p>We do not sell or rent your data. We do not share your data with other third parties except as required by law or to protect our rights and safety.</p>
+
+  <h2>5. Data Retention</h2>
+  <ul>
+    <li><strong>Account and usage data</strong> – Retained while your account exists and as needed to enforce limits and operate the service. You can request deletion of your account and associated data (see “Your rights” below).</li>
+    <li><strong>Text sent for refinement</strong> – Processed in real time to generate a response; we do not retain the content of your refinements for longer than needed to deliver the result and maintain security (e.g. short-lived logs).</li>
+    <li><strong>Local data in the extension</strong> – Stored on your device; you can clear it by clearing the extension’s storage or uninstalling the extension.</li>
+  </ul>
+
+  <h2>6. Your Rights and Choices</h2>
+  <ul>
+    <li>You can <strong>stop using</strong> the extension and sign out at any time.</li>
+    <li>You can <strong>disable context-aware refinement</strong> in the extension settings so that only the text you select (and not recent context) is sent.</li>
+    <li>You may <strong>request access, correction, or deletion</strong> of your personal data (e.g. account and usage data we hold). Contact us using the details below. We will respond in line with applicable law.</li>
+    <li>If you are in the European Economic Area or the UK, you may have additional rights (e.g. data portability, objection, restriction, complaint to a supervisory authority). Contact us to exercise them.</li>
+  </ul>
+
+  <h2>7. Security</h2>
+  <p>We use industry-standard measures (including HTTPS and secure authentication) to protect data in transit and at rest. Authentication is handled by Supabase; we do not store your password. No part of the extension runs arbitrary code from remote servers; only our own backend and the AI provider receive the data necessary to perform the refinement.</p>
+
+  <h2>8. Children</h2>
+  <p>AutoPrompt is not directed at children under 13 (or the applicable age in your jurisdiction). We do not knowingly collect personal data from children. If you believe we have collected such data, please contact us so we can delete it.</p>
+
+  <h2>9. Changes to This Policy</h2>
+  <p>We may update this Privacy Policy from time to time. We will post the updated policy at this URL and, where appropriate, notify you (e.g. via the Chrome Web Store listing or in the extension). The “Last updated” date at the top reflects the latest change. Continued use of the extension after changes constitutes acceptance of the updated policy.</p>
+
+  <h2>10. Contact</h2>
+  <p>For privacy-related questions, or to exercise your rights, contact us at:</p>
+  <p><a href="https://github.com/hacmachdien/auto-prompt/issues">GitHub Issues</a> (tag with “privacy”) or the contact method listed in the AutoPrompt Chrome Web Store listing.</p>
+  <p>If you use a contact form or support page, please include “AutoPrompt Privacy” in the subject or message so we can respond promptly.</p>
+</body>
+</html>
